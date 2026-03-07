@@ -317,6 +317,8 @@ async function _runSelfImprove(config) {
         problem: profileData.problem || '',
         differentiator: profileData.differentiator || '',
       },
+      voice: profileData.voice || null,
+      tactics: profileData.tactics || null,
       researchSignals: xResearchResults.signals ? {
         trendingAngles: xResearchResults.signals.trendingAngles?.slice(0, 8) || [],
         competitorPositioning: xResearchResults.signals.competitorPositioning || [],

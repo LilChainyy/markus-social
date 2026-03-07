@@ -6,7 +6,7 @@
  * the appropriate create-post engine for each slot.
  *
  * Usage:
- *   node schedule-day.js --app dropspace [--date 2026-02-27] [--dry-run]
+ *   node schedule-day.js --app dropspace [--date 2026-02-27] [--dry-run] [--draft]
  */
 
 const fs = require('fs');
@@ -30,6 +30,7 @@ const targetDate = getArg('date') || (() => {
     .toISOString().split('T')[0];
 })();
 const dryRun = hasFlag('dry-run');
+const draftMode = hasFlag('draft');
 
 // ── Cleanup old schedule tracking files (keep last 3 days) ──
 try {
@@ -90,7 +91,7 @@ function isWeekday(dateStr) {
 }
 
 async function main() {
-  console.log(`📅 Scheduling ${appName} posts for ${targetDate}${dryRun ? ' (DRY RUN)' : ''}\n`);
+  console.log(`📅 ${draftMode ? 'Drafting' : 'Scheduling'} ${appName} posts for ${targetDate}${dryRun ? ' (DRY RUN)' : ''}${draftMode ? ' (DRAFT MODE)' : ''}\n`);
 
   const appConfig = paths.loadAppConfig(appName);
   if (!appConfig) {
@@ -165,17 +166,19 @@ async function main() {
         continue;
       }
 
-      // Server-side dedup: check if a launch already exists at this time
-      const existing = await checkScheduledExists(
-        process.env.DROPSPACE_API_KEY_DROPSPACE,
-        platform,
-        scheduledISO
-      );
-      if (existing) {
-        console.log(`  ⏭ ${platform} ${time}: launch already exists on server (${existing.id}), skipping`);
-        markScheduled(platform, time, existing.id);
-        results.skipped++;
-        continue;
+      // Server-side dedup: check if a launch already exists at this time (skip for drafts)
+      if (!draftMode) {
+        const existing = await checkScheduledExists(
+          process.env.DROPSPACE_API_KEY_DROPSPACE,
+          platform,
+          scheduledISO
+        );
+        if (existing) {
+          console.log(`  ⏭ ${platform} ${time}: launch already exists on server (${existing.id}), skipping`);
+          markScheduled(platform, time, existing.id);
+          results.skipped++;
+          continue;
+        }
       }
 
       // Call the appropriate engine directly
@@ -183,7 +186,9 @@ async function main() {
         ? path.join(SKILLS, 'create-visual-post-engine.js')
         : path.join(SKILLS, 'create-text-post-engine.js');
 
-      const cmd = `node "${engineScript}" --app ${appName} --platform ${platform} --schedule "${scheduledISO}" --next`;
+      const cmd = draftMode
+        ? `node "${engineScript}" --app ${appName} --platform ${platform} --draft --next`
+        : `node "${engineScript}" --app ${appName} --platform ${platform} --schedule "${scheduledISO}" --next`;
 
       console.log(`  🚀 ${platform} ${time}: "${hookText.substring(0, 60)}..."`);
 
@@ -199,8 +204,8 @@ async function main() {
         const launchIdMatch = output.match(/Launch[:\s]+([a-f0-9-]{36})/i) || output.match(/id[:\s"]+([a-f0-9-]{36})/i);
         const launchId = launchIdMatch ? launchIdMatch[1] : null;
 
-        if (output.includes('Launch created') || output.includes('SCHEDULED')) {
-          console.log(`  ✅ ${platform} ${time}: scheduled for ${scheduledISO}`);
+        if (output.includes('Launch created') || output.includes('SCHEDULED') || output.includes('Draft created')) {
+          console.log(`  ✅ ${platform} ${time}: ${draftMode ? 'draft created' : `scheduled for ${scheduledISO}`}`);
           markScheduled(platform, time, launchId);
           results.scheduled++;
         } else if (output.includes('already exists') || output.includes('Skipping to avoid duplicate')) {
