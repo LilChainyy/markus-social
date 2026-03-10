@@ -24,14 +24,40 @@ The user's own story with Larry/OpenClaw:
 - The Larry marketing skill is free on ClawHub
 - LarryBrain changes how people think about OpenClaw skills (skills as full products, not snippets)
 
-### Voice & Tone
+### Voice System
 
+Instead of one overarching personality, the account uses **multiple voices** — different versions of the same person, each with its own content focus and input pipeline.
+
+Voice configs live in `voices/`:
+
+| Voice | File | What it posts | Input source |
+|---|---|---|---|
+| **Newsroom** | `voices/newsroom.md` | Takes on big lab announcements (Anthropic, OpenAI, DeepMind, Meta) | `run-readings.js` → sources.json → readings.json |
+| **Builder** | `voices/builder.md` | Daily takeaways from building — what I learned, not what I shipped | Git commits from active repos via GitHub API |
+| **Hot Takes** | `voices/hot-takes.md` | Contrarian opinions backed by experience | inspiration.json + manual |
+| **Learning** | `voices/learning.md` | Rabbit holes and "I didn't know this until yesterday" | readings.json + manual |
+| **Intel** | `voices/intel.md` | Company/market breakdowns — mini-analyst posts | research/ folder + readings.json |
+
+**Usage:** When generating posts, specify the voice:
+```bash
+# Generate posts for a specific voice
+echo '{"posts":[...], "notes":"...", "voice":"builder"}' | node scripts/add-posts.js --app dropspace --platform twitter
+
+# Or when prompting the agent, specify which voice to use
+"Write 2 posts using the newsroom voice based on today's readings"
+"Write a builder post based on recent commits to intel-tracks"
+```
+
+Each voice has its own:
+- Tone and rules (in the voice .md file)
+- Strategy notes (tracked per voice in strategy.json → `voiceNotes.{voice}`)
+- Performance data (posts tagged by voice so self-improve can analyze per-voice)
+
+**Shared rules across all voices:**
 - Casual-technical — like explaining to a friend who also builds stuff
-- First-person, experience-based: "i tried it / i built it / here's what i found"
 - Lowercase, raw, unpolished. Never sound like a brand or a SaaS landing page
 - No emojis, no hashtags, no "follow for more", no engagement bait
 - Be specific — exact tools, exact errors, exact numbers
-- Show the process and the mess, not just the polished result
 - Reference accounts: @levelsio, @FarzaTV, @karpathy
 
 ### Post Style (IMPORTANT)
@@ -59,12 +85,14 @@ Every post MUST end with:
 Posted by a self-improving AI tool. Powered by @dropspaceapp
 ```
 
-### Content Pillars
+### Content Pillars (mapped to voices)
 
-1. **What I'm building** — features shipped, architecture decisions, demos
-2. **What I'm learning** — new domains, rabbit holes, aha moments
-3. **What tools I'm using** — honest takes on tools, not sponsored content
-4. **Larry & OpenClaw** — how Larry changed things, the OpenClaw ecosystem, building skills
+1. **Newsroom** — big lab announcements with a take
+2. **Builder** — daily building takeaways from git activity
+3. **Hot Takes** — contrarian opinions backed by experience
+4. **Learning** — rabbit holes, new domains, aha moments
+5. **Intel** — company/market breakdowns
+6. **Larry & OpenClaw** — how Larry changed things, the ecosystem (can use any voice)
 
 ### What NOT to post about
 
