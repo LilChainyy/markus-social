@@ -10,6 +10,9 @@
  *   ~/markus-automation/apps/{app}/shared-failures.json
  *   ~/markus-automation/apps/{app}/insights.json       — cross-platform strategy notes
  *   ~/markus-automation/apps/{app}/x-research-signals.json
+ *   ~/markus-automation/apps/{app}/inspiration.json    — manually curated post inspiration
+ *   ~/markus-automation/apps/{app}/sources.json        — tracked blog/news sources
+ *   ~/markus-automation/apps/{app}/readings.json       — fetched articles from sources
  *   ~/markus-automation/apps/{app}/reports/            — cross-platform analysis reports
  *   ~/markus-automation/cache/                         — shared API response cache
  */
@@ -77,6 +80,30 @@ function insightsPath(appName) {
  */
 function xResearchSignalsPath(appName) {
   return path.join(appRoot(appName), 'x-research-signals.json');
+}
+
+/**
+ * Manually curated inspiration posts for an app.
+ * e.g. ~/markus-automation/apps/myapp/inspiration.json
+ */
+function inspirationPath(appName) {
+  return path.join(appRoot(appName), 'inspiration.json');
+}
+
+/**
+ * Tracked blog/news sources for an app.
+ * e.g. ~/markus-automation/apps/myapp/sources.json
+ */
+function sourcesPath(appName) {
+  return path.join(appRoot(appName), 'sources.json');
+}
+
+/**
+ * Fetched articles from tracked sources.
+ * e.g. ~/markus-automation/apps/myapp/readings.json
+ */
+function readingsPath(appName) {
+  return path.join(appRoot(appName), 'readings.json');
 }
 
 /**
@@ -186,6 +213,9 @@ module.exports = {
   sharedFailuresPath,
   insightsPath,
   xResearchSignalsPath,
+  inspirationPath,
+  sourcesPath,
+  readingsPath,
   reportsDir,
   cacheDir,
   selfImproveCachePath,

@@ -255,6 +255,39 @@ async function _runSelfImprove(config) {
     console.warn(`⚠️  Could not read X research signals: ${e.message}`);
   }
 
+  // Manually curated inspiration posts (replaces dead X research for style/angle learning)
+  const inspirationFile = paths.inspirationPath(appName);
+  let inspirationPosts = [];
+  try {
+    if (fs.existsSync(inspirationFile)) {
+      const raw = JSON.parse(fs.readFileSync(inspirationFile, 'utf-8'));
+      inspirationPosts = (raw.posts || []).slice(-50); // latest 50 to avoid bloating context
+      if (inspirationPosts.length > 0) {
+        console.log(`💡 Loaded ${inspirationPosts.length} inspiration posts`);
+      }
+    }
+  } catch (e) {
+    console.warn(`⚠️  Could not read inspiration posts: ${e.message}`);
+  }
+
+  // Recent readings from tracked sources
+  const readingsFile = paths.readingsPath(appName);
+  let recentReadings = [];
+  try {
+    if (fs.existsSync(readingsFile)) {
+      const raw = JSON.parse(fs.readFileSync(readingsFile, 'utf-8'));
+      // Only include articles with content that haven't been used yet
+      recentReadings = (raw.articles || [])
+        .filter(a => a.content && !a.usedInPost)
+        .slice(-20);
+      if (recentReadings.length > 0) {
+        console.log(`📖 Loaded ${recentReadings.length} unread articles for post generation`);
+      }
+    }
+  } catch (e) {
+    console.warn(`⚠️  Could not read readings: ${e.message}`);
+  }
+
   // Competitor data flows through researchSignals in POSTS_NEEDED (from x-research-signals.json)
 
   // Cross-pollination removed — the LLM sees all platforms' data in POSTS_NEEDED
@@ -324,6 +357,18 @@ async function _runSelfImprove(config) {
         competitorPositioning: xResearchResults.signals.competitorPositioning || [],
         topExamples: xResearchResults.signals.topExamples || [],
       } : null,
+      inspiration: inspirationPosts.length > 0 ? inspirationPosts.map(p => ({
+        text: p.text,
+        tags: p.tags || [],
+        note: p.note || null,
+      })) : null,
+      readings: recentReadings.length > 0 ? recentReadings.map(a => ({
+        title: a.title,
+        url: a.url,
+        source: a.sourceId,
+        summary: a.summary || '',
+        content: (a.content || '').substring(0, 2000),
+      })) : null,
       recentPosts,
       previousNotes: strategy.notes || null,
       crossPlatformNotes: (() => {
@@ -336,6 +381,7 @@ async function _runSelfImprove(config) {
         instructions: 'Generate COMPLETE post blueprints, not just hooks. Each post should be a cohesive unit.',
         format: 'Each post needs: text (hook/opening line), slideTexts (array of 6 strings — the text overlaid on each slide), slidePrompts (array of 6 complete image generation prompts), caption (platform caption with hashtags and CTA).',
         contentStrategy: 'YOU own the content strategy. recentPosts has ALL posts from the past 14 days with full details and metrics. previousNotes has your strategic reasoning from last run — read it, build on it, revise it. Analyze everything and make your own call.',
+        readingsStrategy: 'readings contains recent articles from AI engineering blogs. When an article is relevant to the builder persona, generate a reaction/commentary post about it — share your take, connect it to what you\'re building, or explain why it matters. Not every article needs a post.',
         ordering: 'ORDER MATTERS. New posts are prepended to the queue and schedule-day picks from the top. Place your BEST strategic pick first.',
         noHardcodedMetrics: 'STRICT: Never include real metrics anywhere — no user counts, revenue, signup counts, view counts, day counts, or specific timeframes. All content must be evergreen.',
         slideRule: 'Slide 1 = hook (scroll-stopper). Slides 2-5 = storytelling arc (VARY this). Slide 6 = CTA.',
@@ -346,6 +392,7 @@ async function _runSelfImprove(config) {
         instructions: 'Generate COMPLETE post blueprints, not just hooks.',
         format: 'Each post needs: text (hook/opening line), postBody (the full post text — for Twitter keep under 280 chars or use thread array for threads, for LinkedIn keep under 700 chars, for Reddit write 2-4 paragraphs).',
         contentStrategy: 'YOU own the content strategy. recentPosts has ALL posts from the past 14 days with full details and metrics. previousNotes has your strategic reasoning from last run — read it, build on it, revise it. Analyze everything and make your own call.',
+        readingsStrategy: 'readings contains recent articles from AI engineering blogs. When an article is relevant to the builder persona, generate a reaction/commentary post about it — share your take, connect it to what you\'re building, or explain why it matters. Not every article needs a post.',
         ordering: 'ORDER MATTERS. New posts are prepended to the queue and schedule-day picks from the top. Place your BEST strategic pick first.',
         noHardcodedMetrics: 'STRICT: Never include real metrics anywhere — no user counts, revenue, signup counts, view counts, day counts, or specific timeframes. All content must be evergreen.',
         formatField: 'Include "format": "<format_name>" in each post blueprint. Default is "text-thread". Check experiments.candidates for formats you can test. Activate experiments via strategy notes commands.',
